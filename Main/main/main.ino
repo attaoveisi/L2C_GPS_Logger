@@ -17,7 +17,7 @@ struct SEND_DATA_STRUCTURE{
   double GPS_lo;
 //  double GPS_ws;
   double GPS_alt;
-//  double GPS_heading;
+  double GPS_heading;
 //  uint16_t GPS_year;
 //  uint8_t GPS_month;
 //  uint8_t GPS_day;
@@ -38,15 +38,8 @@ int pinCS = 53; // SD card digital pin
 #define Logger_Sampling_Time_ms 1000
 unsigned long currentMillis_SD = 0;
 unsigned long previousMillis_SD = 0;
-String Logger_file_name = "Logged_";
+String Logger_file_name = "Logged";
 char *Logger_file_name_ptr, Logger_file_name_char;
-
-int Logger_name_year;
-int Logger_name_month;
-int Logger_name_day;
-int Logger_name_hour;
-int Logger_name_min;
-int Logger_name_second;
 
 #define GSM_MESSAGE_LENGTH 160
 char GSM_message[GSM_MESSAGE_LENGTH];
@@ -69,8 +62,8 @@ DFRobot_SIM808 sim808(&mySerial);//Connect RX,TX,PWR,
 // uncomment "OUTPUT_READABLE_GPS_GSM" if you want to see the GPS data sent to you per Msg
 //#define OUTPUT_READABLE_GPS_GSM
 
-double GPS_la = 0.1;
-double GPS_lo = 0.1;
+double GPS_la = 0.0;
+double GPS_lo = 0.0;
 double GPS_ws = 0.0;
 double GPS_alt = 0.0;
 double GPS_heading = 0.0;
@@ -81,10 +74,10 @@ uint8_t GPS_hour = 0;
 uint8_t GPS_minute = 0;
 uint8_t GPS_second = 0;
 uint8_t GPS_centisecond = 0;
-#define GSM_Sampling_Time_ms 250
+#define GSM_Sampling_Time_ms 3600000
 unsigned long currentMillis_GSM = 0;
 unsigned long previousMillis_GSM = 0;
-#define GPS_Sampling_Time_ms 500
+#define GPS_Sampling_Time_ms 250
 unsigned long currentMillis_GPS = 0;
 unsigned long previousMillis_GPS = 0;
 
@@ -99,49 +92,31 @@ void setup() {
   
   // initialize serial communication
   mySerial.begin(9600);
-  Serial.begin(9600);     //open serial and set the baudrate
+  //Serial.begin(9600);     //open serial and set the baudrate
   Wire.begin();
 
   // ******** Initialize sim808 module *************
   while(!sim808.init())
   {
-     Serial.print("Sim808 init error\r\n");
+     //Serial.print("Sim808 init error\r\n");
      delay(1000);
   }
   delay(3000);
 
   if(sim808.attachGPS()){
-     Serial.println("Open the GPS power success");
+     //Serial.println("Open the GPS power success");
   }else{
-     Serial.println("Open the GPS power failure");
+     //Serial.println("Open the GPS power failure");
   }
   
   //Serial.println("Init Success, please send SMS message to me!");
 
   //******** test phone number and text **********
-  // sim808.sendSMS(GSM_phone,GSM_Initial_MESSAGE);
+  sim808.sendSMS(GSM_phone,GSM_Initial_MESSAGE);
   
   //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
   ET_GPS_data.begin(details(GPS_data), &Wire);
 
-  Logger_name_year = year();
-  Logger_name_month = month();
-  Logger_name_day = day();
-  Logger_name_hour = hour();
-  Logger_name_min = minute();
-  Logger_name_second = second();
-  String Logger_name_year_str = String(Logger_name_year);
-  Logger_file_name += Logger_name_year_str;
-  String Logger_name_month_str = String(Logger_name_month);
-  Logger_file_name += Logger_name_month_str;
-  String Logger_name_day_str = String(Logger_name_day);
-  Logger_file_name += Logger_name_day_str;
-  String Logger_name_hour_str = String(Logger_name_hour);
-  Logger_file_name += Logger_name_hour_str;
-  String Logger_name_min_str = String(Logger_name_min);
-  Logger_file_name += Logger_name_min_str;
-  String Logger_name_second_str = String(Logger_name_second);
-  Logger_file_name += Logger_name_second_str;
   Logger_file_name += ".txt";
   Logger_file_name_ptr = &Logger_file_name_char;
   Logger_file_name.toCharArray(Logger_file_name_ptr, 50);
@@ -152,10 +127,10 @@ void setup() {
   //SD Card Initialization
   if (SD.begin())
   {
-   Serial.println("SD card is ready to use.");
+   //Serial.println("SD card is ready to use.");
   } else
   {
-   Serial.println("SD card initialization failed");
+   //Serial.println("SD card initialization failed");
    return;
   }
 
@@ -192,7 +167,7 @@ void loop() {
   GPS_data.GPS_lo = GPS_lo;
   GPS_data.GPS_alt = GPS_alt;
   //GPS_data.GPS_ws = GPS_ws;
-  //GPS_data.GPS_heading = GPS_heading;
+  GPS_data.GPS_heading = GPS_heading;
   //GPS_data.GPS_year = GPS_year;
   //GPS_data.GPS_month = GPS_month;
   //GPS_data.GPS_day = GPS_day;
@@ -205,98 +180,97 @@ void loop() {
   ET_GPS_data.sendData(I2C_SLAVE_ADDRESS);
 
   // check the SD logging sampling time in ms
-  currentMillis_SD = millis();
-  if (currentMillis_SD - previousMillis_SD > Logger_Sampling_Time_ms) {
-    // Write the data to the logger
-    // Logger = SD.open(Logger_file_name_char, FILE_WRITE);
-    Logger = SD.open("Log.txt", FILE_WRITE);
-    if (Logger) {
-      Logger.print(GPS_year);
-      Logger.print(",");
-      Logger.print(GPS_month);
-      Logger.print(",");
-      Logger.println(GPS_day);
-      Logger.print(",");
-      Logger.print(GPS_hour);
-      Logger.print(",");
-      Logger.print(GPS_minute);
-      Logger.print(",");
-      Logger.print(GPS_second);
-      Logger.print(",");
-      Logger.print(GPS_centisecond);
-      Logger.print(",");
-      Logger.print(GPS_la);
-      Logger.print(",");
-      Logger.print(GPS_lo);
-      Logger.print(",");
-      Logger.print(GPS_alt);
-      Logger.print(",");
-      Logger.print(GPS_ws);
-      Logger.print(",");
-      Logger.println(GPS_heading);
-      Logger.close(); // close the file
-    }else {
-      Serial.println("error opening Logger.txt");
-     }
-     previousMillis_SD = currentMillis_SD;
-   }
+  // currentMillis_SD = millis();
+  // if (currentMillis_SD - previousMillis_SD > Logger_Sampling_Time_ms) {
+  //   // Write the data to the logger
+  //   // Logger = SD.open(Logger_file_name_char, FILE_WRITE);
+  //   Logger = SD.open("Log.txt", FILE_WRITE);
+  //   if (Logger) {
+  //     Logger.print(GPS_year);
+  //     Logger.print(",");
+  //     Logger.print(GPS_month);
+  //     Logger.print(",");
+  //     Logger.println(GPS_day);
+  //     Logger.print(",");
+  //     Logger.print(GPS_hour);
+  //     Logger.print(",");
+  //     Logger.print(GPS_minute);
+  //     Logger.print(",");
+  //     Logger.print(GPS_second);
+  //     Logger.print(",");
+  //     Logger.print(GPS_centisecond);
+  //     Logger.print(",");
+  //     Logger.print(GPS_la);
+  //     Logger.print(",");
+  //     Logger.print(GPS_lo);
+  //     Logger.print(",");
+  //     Logger.print(GPS_alt);
+  //     Logger.print(",");
+  //     Logger.print(GPS_ws);
+  //     Logger.print(",");
+  //     Logger.println(GPS_heading);
+  //     Logger.close(); // close the file
+  //   }else {
+  //     Serial.println("error opening Logger.txt");
+  //    }
+  //    previousMillis_SD = currentMillis_SD;
+  //  }
 }
 
 void readSMS()
 {
-  Serial.print("messageIndex: ");
-  Serial.println(GSM_messageIndex);
+  //Serial.print("messageIndex: ");
+  //Serial.println(GSM_messageIndex);
   
-  sim808.readSMS(GSM_messageIndex, GSM_message, GSM_MESSAGE_LENGTH, GSM_phone, GSM_datetime);
+  //sim808.readSMS(GSM_messageIndex, GSM_message, GSM_MESSAGE_LENGTH, GSM_phone, GSM_datetime);
              
   //***********In order not to full SIM Memory, is better to delete it**********
-  sim808.deleteSMS(GSM_messageIndex);
-  Serial.print("From number: ");
-  Serial.println(GSM_phone);  
-  Serial.print("Datetime: ");
-  Serial.println(GSM_datetime);        
-  Serial.print("Recieved Message: ");
-  Serial.println(GSM_message);
+  //sim808.deleteSMS(GSM_messageIndex);
+  //Serial.print("From number: ");
+  //Serial.println(GSM_phone);  
+  //Serial.print("Datetime: ");
+  //Serial.println(GSM_datetime);        
+  //Serial.print("Recieved Message: ");
+  //Serial.println(GSM_message);
 }
 
 void getGPS()
 { 
   while(!sim808.attachGPS())
   {
-    Serial.println("Open the GPS power failure");
+    //Serial.println("Open the GPS power failure");
     delay(1000);
   }
-  delay(3000);
+  delay(500);
 
-  Serial.println("Open the GPS power success");
+  //Serial.println("Open the GPS power success");
     
   while(!sim808.getGPS())
   {
-    Serial.println("Waiting to get GPS data");
   }
 
-  Serial.print(sim808.GPSdata.year);
-  Serial.print("/");
-  Serial.print(sim808.GPSdata.month);
-  Serial.print("/");
-  Serial.print(sim808.GPSdata.day);
-  Serial.print(" ");
-  Serial.print(sim808.GPSdata.hour);
-  Serial.print(":");
-  Serial.print(sim808.GPSdata.minute);
-  Serial.print(":");
-  Serial.print(sim808.GPSdata.second);
-  Serial.print(":");
-  Serial.println(sim808.GPSdata.centisecond);
-  Serial.print("latitude :");
-  Serial.println(sim808.GPSdata.lat);
-  Serial.print("longitude :");
-  Serial.println(sim808.GPSdata.lon);
-  Serial.print("speed_kph :");
-  Serial.println(sim808.GPSdata.speed_kph);
-  Serial.print("heading :");
-  Serial.println(sim808.GPSdata.heading);
-  Serial.println();
+  // Serial.print(sim808.GPSdata.year);
+  // Serial.print("/");
+  // Serial.print(sim808.GPSdata.month);
+  // Serial.print("/");
+  // Serial.print(sim808.GPSdata.day);
+  // Serial.print(" ");
+  // Serial.print(sim808.GPSdata.hour);
+  // Serial.print(":");
+  // Serial.print(sim808.GPSdata.minute);
+  // Serial.print(":");
+  // Serial.print(sim808.GPSdata.second);
+  // Serial.print(":");
+  // Serial.println(sim808.GPSdata.centisecond);
+  // Serial.print("latitude :");
+  // Serial.println(sim808.GPSdata.lat);
+  // Serial.print("longitude :");
+  // Serial.println(sim808.GPSdata.lon);
+  // Serial.print("speed_kph :");
+  // Serial.println(sim808.GPSdata.speed_kph);
+  // Serial.print("heading :");
+  // Serial.println(sim808.GPSdata.heading);
+  // Serial.println();
 
   GPS_la = sim808.GPSdata.lat;
   GPS_lo = sim808.GPSdata.lon;
