@@ -33,6 +33,14 @@ SEND_DATA_STRUCTURE GPS_data;
 //define slave i2c address
 #define I2C_SLAVE_ADDRESS 9
 
+bool state = LOW;
+#define LED 8
+
+void stateChange(){
+  state = !state;
+  digitalWrite(LED, state);  
+}
+
 File Logger;
 int pinCS = 53; // SD card digital pin
 #define Logger_Sampling_Time_ms 1000
@@ -74,10 +82,10 @@ uint8_t GPS_hour = 0;
 uint8_t GPS_minute = 0;
 uint8_t GPS_second = 0;
 uint8_t GPS_centisecond = 0;
-#define GSM_Sampling_Time_ms 3600000
+#define GSM_Sampling_Time_ms 250
 unsigned long currentMillis_GSM = 0;
 unsigned long previousMillis_GSM = 0;
-#define GPS_Sampling_Time_ms 250
+#define GPS_Sampling_Time_ms 20
 unsigned long currentMillis_GPS = 0;
 unsigned long previousMillis_GPS = 0;
 
@@ -89,6 +97,8 @@ void readSMS();
 // ================================================================
 
 void setup() {
+
+  pinMode(LED, OUTPUT); // Declare the LED as an output
   
   // initialize serial communication
   mySerial.begin(9600);
@@ -112,7 +122,7 @@ void setup() {
   //Serial.println("Init Success, please send SMS message to me!");
 
   //******** test phone number and text **********
-  sim808.sendSMS(GSM_phone,GSM_Initial_MESSAGE);
+  //sim808.sendSMS(GSM_phone,GSM_Initial_MESSAGE);
   
   //start the library, pass in the data details and the name of the serial port. Can be Serial, Serial1, Serial2, etc.
   ET_GPS_data.begin(details(GPS_data), &Wire);
@@ -234,43 +244,44 @@ void readSMS()
   //Serial.println(GSM_message);
 }
 
-void getGPS()
-{ 
+void getGPS(){ 
   while(!sim808.attachGPS())
   {
     //Serial.println("Open the GPS power failure");
-    delay(1000);
   }
-  delay(500);
+  delay(80);
 
   //Serial.println("Open the GPS power success");
+  digitalWrite(LED, HIGH);
     
-  while(!sim808.getGPS())
+  if(!sim808.getGPS())
   {
+    //Serial.println("not getting anything");
+    stateChange();
   }
 
-  // Serial.print(sim808.GPSdata.year);
-  // Serial.print("/");
-  // Serial.print(sim808.GPSdata.month);
-  // Serial.print("/");
-  // Serial.print(sim808.GPSdata.day);
-  // Serial.print(" ");
-  // Serial.print(sim808.GPSdata.hour);
-  // Serial.print(":");
-  // Serial.print(sim808.GPSdata.minute);
-  // Serial.print(":");
-  // Serial.print(sim808.GPSdata.second);
-  // Serial.print(":");
-  // Serial.println(sim808.GPSdata.centisecond);
-  // Serial.print("latitude :");
-  // Serial.println(sim808.GPSdata.lat);
-  // Serial.print("longitude :");
-  // Serial.println(sim808.GPSdata.lon);
-  // Serial.print("speed_kph :");
-  // Serial.println(sim808.GPSdata.speed_kph);
-  // Serial.print("heading :");
-  // Serial.println(sim808.GPSdata.heading);
-  // Serial.println();
+//   Serial.print(sim808.GPSdata.year);
+//   Serial.print("/");
+//   Serial.print(sim808.GPSdata.month);
+//   Serial.print("/");
+//   Serial.print(sim808.GPSdata.day);
+//   Serial.print(" ");
+//   Serial.print(sim808.GPSdata.hour);
+//   Serial.print(":");
+//   Serial.print(sim808.GPSdata.minute);
+//   Serial.print(":");
+//   Serial.print(sim808.GPSdata.second);
+//   Serial.print(":");
+//   Serial.println(sim808.GPSdata.centisecond);
+//   Serial.print("latitude :");
+//   Serial.println(sim808.GPSdata.lat);
+//   Serial.print("longitude :");
+//   Serial.println(sim808.GPSdata.lon);
+//   Serial.print("speed_kph :");
+//   Serial.println(sim808.GPSdata.speed_kph);
+//   Serial.print("heading :");
+//   Serial.println(sim808.GPSdata.heading);
+//   Serial.println();
 
   GPS_la = sim808.GPSdata.lat;
   GPS_lo = sim808.GPSdata.lon;
@@ -289,11 +300,11 @@ void getGPS()
     dtostrf(GPS_la, 6, 2, GSM_lat); //put double value of la into char array of lat. 6 = number of digits before decimal sign. 2 = number of digits after the decimal sign.
     dtostrf(GPS_lo, 6, 2, GSM_lon); //put double value of lo into char array of lon
     dtostrf(GPS_ws, 6, 2, GSM_wspeed);  //put double value of ws into char array of wspeed
-    sprintf(GSM_MESSAGE, "Latitude : %s\nLongitude : %s\nWind Speed : %s kph\nMy Module Is Working. Atta Oveisi. Try With This Link.\nh_odomttp://www.latlong.net/Show-Latitude-Longitude.html\nh_odomttp://maps.google.com/maps?q=%s,%s\n", GSM_lat, GSM_lon, GSM_wspeed, GSM_lat, GSM_lon);
-    Serial.println("Sim808 init success");
-    Serial.println("Start to send message ...");
-    Serial.println(GSM_MESSAGE);
-    Serial.println(GSM_phone);
+    //sprintf(GSM_MESSAGE, "Latitude : %s\nLongitude : %s\nWind Speed : %s kph\nMy Module Is Working. Atta Oveisi. Try With This Link.\nh_odomttp://www.latlong.net/Show-Latitude-Longitude.html\nh_odomttp://maps.google.com/maps?q=%s,%s\n", GSM_lat, GSM_lon, GSM_wspeed, GSM_lat, GSM_lon);
+    //Serial.println("Sim808 init success");
+    //Serial.println("Start to send message ...");
+    //Serial.println(GSM_MESSAGE);
+    //Serial.println(GSM_phone);
     sim808.sendSMS(GSM_phone,GSM_MESSAGE);
   #endif
 }
