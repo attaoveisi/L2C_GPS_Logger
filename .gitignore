@@ -1,5 +1,8 @@
 # Object file
 *.o
+.pio/
+.vscode/
+~/
 
 # Ada Library Information
 *.ali
