@@ -19,11 +19,11 @@ ros::Publisher gps("gps", &gpsMsg);
 
 // Publisher object for filtered IMU
 
-double GPS_la = 0.1;
-double GPS_lo = 0.1;
-double GPS_ws = 0.1;
-double GPS_alt = 0.1;
-double GPS_heading = 0.1;
+float GPS_la = 0.1f;
+float GPS_lo = 0.1f;
+float GPS_ws = 0.1f;
+float GPS_alt = 0.1f;
+float GPS_heading = 0.1f;
 uint16_t GPS_year = 1;
 uint8_t GPS_month = 1;
 uint8_t GPS_day = 1;
@@ -35,6 +35,8 @@ uint8_t GPS_centisecond = 1;
 unsigned long currentMillis_GPS = 0;
 unsigned long previousMillis_GPS = 0;
 
+unsigned long seq = 0;
+
 bool state = LOW;
 #define LED 8
 
@@ -42,6 +44,8 @@ void stateChange(){
   state = !state;
   digitalWrite(LED, state);  
 }
+
+bool isRosConnected = false;
 
 File Logger;
 int pinCS = 53; // SD card digital pin
@@ -86,11 +90,17 @@ void readSMS();
 
 void setup() {
 
+  //Connect to ROS
+  nh.initNode();
+
+  //advertise GPS data
+  nh.advertise(gps);
+
   pinMode(LED, OUTPUT); // Declare the LED as an output
   
   // initialize serial communication
   mySerial.begin(9600);
-  //Serial.begin(9600);     //open serial and set the baudrate
+  //Serial.begin(57600);     //open serial and set the baudrate
 
     // ******** Initialize sim808 module *************
   while(!sim808.init())
@@ -128,14 +138,6 @@ void setup() {
    //Serial.println("SD card initialization failed");
    return;
   }
-
-  //Connect to ROS
-  nh.initNode();
-
-  //advertise GPS data
-  nh.advertise(gps);
-
-  
 }
 
 // ================================================================
@@ -163,6 +165,36 @@ void loop() {
     
     //************* Turn off the GPS power ************
     sim808.detachGPS();
+
+      if(nh.connected()){
+        isRosConnected = true;
+        //publish GPS data
+        gpsMsg.header.stamp = nh.now();
+        gpsMsg.header.frame_id = "map";
+        gpsMsg.header.seq = seq++;
+        gpsMsg.latitude = GPS_la;
+        gpsMsg.longitude = GPS_lo;
+        gpsMsg.altitude = GPS_alt;
+        //gpsMsg.position_covariance_type = 0;
+
+        gps.publish(&gpsMsg);
+        nh.spinOnce();
+      }else{
+        isRosConnected = false;
+        //nh.initNode();
+
+        //publish GPS data
+        gpsMsg.header.stamp = nh.now();
+        gpsMsg.header.frame_id = "map";
+        gpsMsg.header.seq = seq++;
+        gpsMsg.latitude = GPS_la;
+        gpsMsg.longitude = GPS_lo;
+        gpsMsg.altitude = GPS_alt;
+        //gpsMsg.position_covariance_type = 0;
+
+        gps.publish(&gpsMsg);
+        nh.spinOnce();
+      }
     previousMillis_GPS = currentMillis_GPS;
   }
 
@@ -203,14 +235,8 @@ void loop() {
   //    previousMillis_SD = currentMillis_SD;
   //  }
   
-  //publish GPS data
-  gpsMsg.header.stamp = nh.now();
-  gpsMsg.header.frame_id = "map";
-  gpsMsg.latitude = GPS_la;
-  gpsMsg.longitude = GPS_lo;
-  gpsMsg.altitude = GPS_alt;
-  gps.publish(&gpsMsg);
-  nh.spinOnce();
+  //nh.spinOnce();
+  
   delay(2);
 }
 
